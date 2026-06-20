@@ -1,25 +1,22 @@
 import re
 
-def split_into_clauses(text):
-    clauses = []
-
-    # Split using headings (like Payment, Termination, etc.)
-    pattern = r'(CONTRACT AGREEMENT|Payment Terms|Termination|Liability|Confidentiality|Agreement)'
+def extract_clauses(text):
+    pattern = r'(\d+\.\d+\s+[A-Za-z ].*?)(?=\n\d+\.\d+|\n\d+\.|\Z)'
     
-    parts = re.split(pattern, text)
+    matches = re.findall(pattern, text, re.DOTALL)
 
-    for i in range(1, len(parts), 2):
-        heading = parts[i].strip()
-        content = parts[i+1].strip() if i+1 < len(parts) else ""
-
-        # Fix spacing issue (like 15day → 15 day)
-        content = re.sub(r'(\d+)([a-zA-Z]+)', r'\1 \2', content)
-
-        clause = {
+    clauses = []
+    
+    for i, match in enumerate(matches):
+        lines = match.strip().split("\n")
+        heading = lines[0]
+        content = " ".join(lines[1:])
+        
+        clauses.append({
+            "clause_id": i+1,
             "heading": heading,
             "content": content
-        }
-
-        clauses.append(clause)
-
+        })
+    
     return clauses
+

@@ -7,6 +7,7 @@ from src.risk_detector import detect_risk
 
 from src.llm_explainer import explain_clause
 
+
 # Train model once
 model, vectorizer = train_model()
 

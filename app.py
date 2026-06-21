@@ -5,11 +5,18 @@ import pdfplumber
 from src.clause_classifier import train_model, classify_clause
 from src.risk_detector import detect_risk
 
+from src.llm_explainer import explain_clause
+
 # Train model once
 model, vectorizer = train_model()
 
 # Streamlit UI
-st.title("📄 Contract Guardian AI")
+st.set_page_config(page_title="Contract Guardian", layout="wide")
+
+st.title("📜 Contract Guardian AI")
+st.markdown("AI-powered contract risk detection & explanation system")
+
+
 def answer_question(question, clauses, vectorizer):
     # Convert all clause texts
     clause_texts = [c["content"] for c in clauses]
@@ -27,8 +34,16 @@ def answer_question(question, clauses, vectorizer):
 
     return clauses[best_index]
 
+st.sidebar.title("⚙️ Settings")
+st.sidebar.markdown("Upload your contract and analyze risks")
 
-uploaded_file = st.file_uploader("Upload Contract PDF", type="pdf")
+
+
+with st.sidebar:
+    st.header("⚙️ Settings")
+    uploaded_file = st.file_uploader("📄 Upload Contract", type="pdf")
+    if uploaded_file:
+        st.sidebar.success("✅ File uploaded successfully")
 
 
 # ---------------------------
@@ -46,6 +61,7 @@ def extract_text(pdf_file):
 # ---------------------------
 # Split into clauses
 # ---------------------------
+
 def split_clauses(text):
     import re
 
@@ -78,6 +94,25 @@ def split_clauses(text):
 # ---------------------------
 
 if uploaded_file is not None:
+
+    # 🔥 NEW: Full Contract Analysis Function
+    def analyze_full_contract(contract_text):
+        prompt = f"""
+        You are a legal AI assistant.
+
+        Analyze this contract and provide:
+        1. Summary
+        2. Key Risks
+        3. Important obligations
+        4. Any unfair clauses
+
+        Contract:
+        {contract_text}
+        """
+
+        response = explain_clause(contract_text)  # reuse your LLM function
+        return response
+
     text = extract_text(uploaded_file)
 
     if not text.strip():
@@ -85,23 +120,53 @@ if uploaded_file is not None:
     else:
         clauses = split_clauses(text)
 
+        # 🔥 BUTTON: Full Analysis
+        if st.button("🔍 Analyze Full Contract"):
+    
+            with st.spinner("Analyzing with AI..."):
+                result = analyze_full_contract(text)
+
+            st.subheader("📊 Full Contract Analysis")
+            st.write(result)
+
+            st.download_button(
+                label="📥 Download Analysis",
+                data=result,
+                file_name="contract_analysis.txt"
+        )
+
         if not clauses:
             st.warning("⚠️ No clauses detected. Try a better formatted contract.")
         else:
             # ✅ Q&A SECTION (NOW CORRECTLY PLACED)
             st.subheader("🤖 Ask Questions from Contract")
 
+            # 🔥 Chat memory
+            if "chat_history" not in st.session_state:
+                st.session_state.chat_history = []
+
             user_question = st.text_input("Ask something about the contract:")
+
+            if user_question:
+                best_clause = answer_question(user_question, clauses, vectorizer)
+                llm_answer = explain_clause(best_clause["content"])
+
+                st.session_state.chat_history.append(("You", user_question))
+                st.session_state.chat_history.append(("AI", llm_answer))
+
+            # Display chat history
+            for sender, msg in st.session_state.chat_history:
+                st.write(f"**{sender}:** {msg}")
 
             if user_question:
                 best_clause = answer_question(user_question, clauses, vectorizer)
 
                 st.markdown("### 💡 Answer")
 
-                summary = best_clause["content"].split(".")[0]
+                llm_answer = explain_clause(best_clause["content"])
 
                 st.write(f"**Relevant Clause:** {best_clause['heading']}")
-                st.write(f"**Answer:** {summary}")
+                st.write(f"**Answer:** {llm_answer}")
 
                 with st.expander("📖 View Full Clause"):
                     st.write(best_clause["content"])
@@ -123,15 +188,34 @@ if uploaded_file is not None:
                 # Risk Detection
                 risk, risky_lines = detect_risk(clause["content"])
 
+                # LLM Explanation (only for medium/high risk to save API usage)
+                llm_output = ""
+
+                if risk in ["Medium", "High"]:
+                    try:
+                        llm_output = explain_clause(clause["content"])
+                    except Exception as e:
+                        llm_output = "⚠️ LLM failed: " + str(e)
+
                 # Display
                 st.markdown(f"### Clause {i+1}: {clause['heading']}")
 
                 st.write(f"**Type:** {label} ({confidence*100:.2f}% confidence)")
-                st.write(f"**Risk Level:** {risk}")
+                if risk == "High":
+                    st.error(f"⚠️ Risk Level: {risk}")
+                elif risk == "Medium":
+                    st.warning(f"⚠️ Risk Level: {risk}")
+                else:
+                    st.success(f"✅ Risk Level: {risk}")
 
                 # Summary
                 summary = clause["content"].split(".")[0]
                 st.write(f"**Summary:** {summary}")
+
+                # LLM Insight
+                if llm_output:
+                    st.info("🤖 AI Insight")
+                    st.write(llm_output)
 
                 # Risky sentences
                 if risky_lines:
@@ -143,4 +227,16 @@ if uploaded_file is not None:
                 with st.expander("📖 View Full Clause"):
                     st.write(clause["content"])
 
+                # 🔥 NEW: Rewrite Button
+                if st.button(f"Rewrite Clause {i+1}"):
+                    try:
+                        rewritten = explain_clause(
+                            f"Rewrite this clause in a safer way:\n{clause['content']}"
+                        )
+                        st.success("✍️ Safer Version:")
+                        st.write(rewritten)
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+
                 st.write("---")
+

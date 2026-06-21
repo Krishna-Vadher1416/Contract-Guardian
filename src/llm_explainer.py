@@ -25,7 +25,7 @@ def explain_clause(clause_text):
         return "No clause text provided."
 
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-pro")
 
         prompt = f"""
 You are a legal AI assistant.

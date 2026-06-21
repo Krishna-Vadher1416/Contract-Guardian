@@ -166,26 +166,6 @@ pip install -r requirements.txt
 
 ---
 
-## 🔐 Environment Variables
-
-Create a `.env` file:
-
-```id="env1"
-GCP_API_KEY=your_api_key_here
-```
-
-Load in code:
-
-```python id="env2"
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-API_KEY = os.getenv("GCP_API_KEY")
-```
-
-⚠️ Never push API keys to GitHub.
-
 ---
 
 ## ▶️ Running the Application

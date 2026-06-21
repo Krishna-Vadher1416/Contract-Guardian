@@ -1,48 +1,34 @@
-# src/llm_explainer.py
-
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 import os
 
-# Load environment variables
 load_dotenv()
 
-# Get API Key
-API_KEY = os.getenv("GOOGLE_API_KEY")
+API_KEY = os.getenv("GCP_API_KEY")
 
-# Configure Gemini
-genai.configure(api_key=API_KEY)
-
+# Initialize client
+client = genai.Client(api_key=API_KEY)
 
 def explain_clause(clause_text):
-    """
-    Explains a legal clause using Gemini AI.
-    Returns simplified explanation + risk level + reason.
-    """
-
-    # Safety check
-    if not clause_text or clause_text.strip() == "":
-        return "No clause text provided."
-
     try:
-        model = genai.GenerativeModel("gemini-pro")
-
         prompt = f"""
-You are a legal AI assistant.
+You are a legal assistant.
 
-Explain the following contract clause in simple English.
-
+Explain this clause in simple English.
 Also provide:
-1. Risk Level (Low / Medium / High)
-2. Reason for the risk
+- Risk level (Low/Medium/High)
+- Why it is risky
 
 Clause:
 {clause_text}
 """
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",   # ✅ Correct modern model
+            contents=prompt
+        )
 
-        return response.text if response.text else "No response generated."
+        return response.text
 
     except Exception as e:
         return f"Error generating explanation: {str(e)}"

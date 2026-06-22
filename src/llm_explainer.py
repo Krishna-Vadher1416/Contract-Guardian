@@ -24,7 +24,7 @@ Clause:
 """
 
         response = client.models.generate_content(
-            model="gemini-1.5-flash",   # ✅ Correct modern model
+            model="gemini-2.0-flash",
             contents=prompt
         )
 
@@ -32,3 +32,4 @@ Clause:
 
     except Exception as e:
         return f"Error generating explanation: {str(e)}"
+

@@ -1,5 +1,6 @@
 from google import genai
 from dotenv import load_dotenv
+import streamlit as st
 import os
 
 load_dotenv()
@@ -9,6 +10,7 @@ API_KEY = os.getenv("GCP_API_KEY")
 # Initialize client
 client = genai.Client(api_key=API_KEY)
 
+@st.cache_data
 def explain_clause(clause_text):
     try:
         prompt = f"""
@@ -24,7 +26,7 @@ Clause:
 """
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.0-flash-lite",
             contents=prompt
         )
 
